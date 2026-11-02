@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>연산카드 뽑기</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#fff4d6; --ink:#2b2350; --panel:#ffffff; --muted:#6b6490;
+  --plus:#ff6b8b; --minus:#2fb8ff; --times:#ffb800; --div:#34c98a;
+  --num:#7a5cff; --shadow:#2b2350;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#1d1840;--ink:#fff4d6;--panel:#2b2560;--muted:#b9b2e6;--shadow:#0c0922}
+}
+:root[data-theme="dark"]{--bg:#1d1840;--ink:#fff4d6;--panel:#2b2560;--muted:#b9b2e6;--shadow:#0c0922}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Jua","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;min-height:100vh;
+  background-image:radial-gradient(circle at 15% 20%,rgba(255,107,139,.18) 0 90px,transparent 91px),radial-gradient(circle at 88% 75%,rgba(47,184,255,.18) 0 120px,transparent 121px)}
+main{max-width:860px;margin:0 auto;padding:20px 16px 40px;text-align:center}
+h1{font-size:clamp(28px,6vw,46px);margin:8px 0 4px;letter-spacing:-1px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:clamp(15px,3vw,19px)}
+.goal{display:inline-block;background:var(--panel);border:3px solid var(--shadow);border-radius:16px;padding:8px 16px;box-shadow:4px 4px 0 var(--shadow);margin-bottom:20px;font-size:clamp(15px,3vw,19px)}
+.row{display:flex;justify-content:center;gap:clamp(10px,3vw,22px);flex-wrap:wrap;margin:10px 0}
+.label{font-size:18px;margin:18px 0 4px;color:var(--muted)}
+.card{width:clamp(90px,26vw,200px);aspect-ratio:3/4;border:4px solid var(--shadow);border-radius:22px;box-shadow:8px 8px 0 var(--shadow);display:flex;align-items:center;justify-content:center;font-size:clamp(56px,16vw,120px);font-weight:900;color:#fff;background:repeating-linear-gradient(45deg,#8a7cff 0 12px,#7a5cff 12px 24px);text-shadow:3px 3px 0 rgba(0,0,0,.25);user-select:none}
+.card.back::after{content:"?";}
+.card.rolling{animation:shake .12s infinite}
+.card.pop{animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+.card.op-plus{background:var(--plus)} .card.op-minus{background:var(--minus)}
+.card.op-times{background:var(--times)} .card.op-div{background:var(--div)}
+.card.num{background:var(--num)}
+.card.num.back,.card.op.back{background:repeating-linear-gradient(45deg,#8a7cff 0 12px,#7a5cff 12px 24px)}
+@keyframes shake{0%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(4deg) translateY(-6px)}100%{transform:rotate(-4deg) translateY(0)}}
+@keyframes pop{0%{transform:scale(.4) rotateY(180deg)}100%{transform:scale(1) rotateY(0)}}
+.btns{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:24px 0 10px}
+button{font:inherit;font-size:clamp(18px,4vw,24px);padding:12px 22px;border:4px solid var(--shadow);border-radius:16px;box-shadow:5px 5px 0 var(--shadow);cursor:pointer;color:#2b2350;transition:transform .08s,box-shadow .08s}
+button:hover{transform:translate(-1px,-1px)}
+button:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--shadow)}
+button:focus-visible{outline:4px solid #7a5cff;outline-offset:3px}
+button:disabled{opacity:.55;cursor:not-allowed}
+#b1{background:#ffb800}#b2{background:#8ee3b7}#b3{background:#ff9bb3}
+.count-picker{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:14px 0 18px;font-size:20px}.count-picker label{display:flex;align-items:center;gap:5px;cursor:pointer;background:var(--panel);border:2px solid var(--shadow);border-radius:12px;padding:7px 12px}.count-picker input{width:20px;height:20px;accent-color:var(--num)}
+.opts{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;font-size:17px;margin-top:8px;color:var(--muted)}
+.opts label{cursor:pointer;display:flex;align-items:center;gap:6px}
+.opts input{width:20px;height:20px}
+.answer{margin:20px auto 0;max-width:640px;background:var(--panel);border:4px solid var(--shadow);border-radius:18px;box-shadow:6px 6px 0 var(--shadow);padding:16px;display:none}
+.answer.show{display:block;animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+.answer .expr{font-size:clamp(22px,5vw,36px);word-break:keep-all;overflow-wrap:anywhere;margin:6px 0}
+.answer .val{font-size:clamp(30px,8vw,56px);color:var(--plus);font-weight:900}
+.hint{font-size:15px;color:var(--muted);margin-top:6px}
+@media (prefers-reduced-motion: reduce){.card.rolling,.card.pop,.answer.show{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>🎲 연산카드 뽑기 🎲</h1>
+  <p class="sub">버튼을 눌러 오늘의 연산 카드 3장을 뽑아 보자!</p>
+
+  <div class="label" id="cardLabel">연산 카드 (서로 다른 3장)</div>
+  <div class="count-picker" aria-label="뽑을 카드 수 선택">
+    <span>카드 개수</span>
+    <label><input type="radio" name="cardCount" value="1"> 1장</label>
+    <label><input type="radio" name="cardCount" value="2"> 2장</label>
+    <label><input type="radio" name="cardCount" value="3" checked> 3장</label>
+  </div>
+  <div class="row" id="ops"></div>
+
+  <div class="btns">
+    <button id="b1">🃏 연산카드 뽑기</button>
+  </div>
+  <div class="opts">
+    <label><input type="checkbox" id="mute"> 🔇 소리 끄기</label>
+  </div>
+
+</main>
+
+<script>
+var OPS=[{s:"+",c:"op-plus",j:"+"},{s:"−",c:"op-minus",j:"-"},{s:"×",c:"op-times",j:"*"},{s:"÷",c:"op-div",j:"/"}];
+var ops=[],busy=false;
+var $=function(id){return document.getElementById(id)};
+var opsEl=$("ops");
+
+function makeCards(el,n,cls){el.innerHTML="";var a=[];for(var i=0;i<n;i++){var d=document.createElement("div");d.className="card back "+cls;el.appendChild(d);a.push(d)}return a}
+var opCards=makeCards(opsEl,3,"op");
+function selectedCount(){return Number(document.querySelector('input[name="cardCount"]:checked').value)}
+function updateCount(){
+  if(busy)return;
+  var n=selectedCount();
+  opCards=makeCards(opsEl,n,"op");
+  $("cardLabel").textContent="연산 카드 (서로 다른 "+n+"장)";
+  document.querySelector(".sub").textContent="버튼을 눌러 오늘의 연산 카드 "+n+"장을 뽑아 보자!";
+}
+document.querySelectorAll('input[name="cardCount"]').forEach(function(el){el.addEventListener("change",updateCount)});
+
+/* ---------- 소리 (WebAudio) ---------- */
+var ac=null;
+function audio(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state==="suspended")ac.resume();return ac}
+function tone(f,t,d,type,v){if($("mute").checked)return;var a=audio();if(!a)return;var o=a.createOscillator(),g=a.createGain();o.type=type||"square";o.frequency.value=f;var s=a.currentTime+(t||0);g.gain.setValueAtTime(v||.12,s);g.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(g);g.connect(a.destination);o.start(s);o.stop(s+d+.02)}
+function tick(){tone(600+Math.random()*500,0,.05,"square",.07)}
+function ding(i){tone(520+i*130,0,.25,"triangle",.2);tone(1040+i*260,0,.3,"sine",.1)}
+function fanfare(){[523,659,784,1047,784,1047,1319].forEach(function(f,i){tone(f,i*.11,.22,"square",.12)})}
+function drum(){for(var i=0;i<8;i++)tone(120+i*10,i*.06,.08,"sawtooth",.08)}
+
+/* ---------- 유틸 ---------- */
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+function setOp(card,o){card.className="card op pop "+o.c;card.textContent=o.s}
+
+/* 카드가 돌아가며 섞이는 연출 후 하나씩 공개 */
+async function draw(cards,finalVals,randFn,setFn,rollMs){
+  busy=true;$("b1").disabled=true;document.querySelectorAll('input[name="cardCount"]').forEach(function(el){el.disabled=true});
+  drum();
+  cards.forEach(function(c){c.className=c.className.replace(/ ?(rolling|pop|back)/g,"")+" rolling"});
+  var timer=setInterval(function(){cards.forEach(function(c,i){if(c.classList.contains("rolling")){randFn(c)}});tick()},90);
+  for(var i=0;i<cards.length;i++){
+    await sleep(rollMs+i*500);
+    cards[i].classList.remove("rolling");
+    setFn(cards[i],finalVals[i]);
+    ding(i);
+  }
+  clearInterval(timer);
+  await sleep(200);
+  fanfare();
+  busy=false;
+  $("b1").disabled=false;document.querySelectorAll('input[name="cardCount"]').forEach(function(el){el.disabled=false});
+}
+
+$("b1").onclick=function(){
+  if(busy)return;audio();
+  ops=shuffle(OPS).slice(0,selectedCount()); /* 4개 중 중복 없이 선택한 개수 */
+  draw(opCards,ops,function(c){var o=OPS[Math.floor(Math.random()*4)];c.className="card op rolling "+o.c;c.textContent=o.s},setOp,700);
+};
+</script>
+</body>
+</html>
